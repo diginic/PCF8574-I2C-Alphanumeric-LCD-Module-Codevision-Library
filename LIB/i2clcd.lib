@@ -1,0 +1,125 @@
+/* PCF8574 I2C LCD Driver Module Codevision Library
+   By DiGiNiC .Co / Mohammad Reza Hamidi
+   
+   (C) 2015 DiGiNiC
+   http://diginic.net
+*/
+#include <i2c.h>
+#include <delay.h>
+
+bit lbl=1;
+#define LCD_ADDR 0x4E
+#define LRS 0
+#define LRW 1
+#define LE 2
+#define LBL 3
+#define LD4 4
+#define LD5 5
+#define LD6 6
+#define LD7 7
+
+unsigned int base_y[5]={0x00,0x80,0xC0,0x94,0xD4};
+unsigned char lcd_write(unsigned char data){
+unsigned char start=0,ack=0;
+      start=i2c_start();
+      if(start==1){
+        ack=i2c_write(LCD_ADDR);
+        if(ack==1){} 
+        if(lbl==1){
+        data|=(1<<LBL);
+        }else{
+        data&=~(1<<LBL);        
+        }
+        ack=i2c_write(data);
+        if(ack==1){} 
+        i2c_stop();  
+        }   
+       return ack;    
+}
+void lcd_reset(void) 
+{
+    unsigned char data;
+    delay_ms(20); 
+    data = 0x30 |(1<<LE);
+    lcd_write(data);
+    data &= ~(1<<LE);  
+    lcd_write(data);
+    delay_ms(10); 
+    data |= (1<<LE);
+    lcd_write(data);
+    data &= ~(1<<LE);  
+    lcd_write(data);
+    delay_ms(1); 
+    data |= (1<<LE);
+    lcd_write(data);
+    data &= ~(1<<LE);  
+    lcd_write(data);
+    delay_ms(1);
+    data=0x20 |(1<<LE);
+    lcd_write(data);
+    data&=~(1<<LE);  
+    lcd_write(data);
+    delay_ms(1);   
+} 
+void lcd_cmd (char cmd) 
+{
+unsigned char data;
+    data=(cmd & 0xF0)|(1<<LE);
+    lcd_write(data);
+    data&=~(1<<LE);  
+    lcd_write(data);
+    data=((cmd << 4) & 0xF0)|(1<<LE);
+    lcd_write(data);
+    data&=~(1<<LE);  
+    lcd_write(data);
+    delay_ms(2); 
+    delay_ms(2); 
+} 
+void lcd_init (void) 
+{
+    i2c_init();
+    lcd_reset();         // Call LCD reset lcd_cmd(0×28);       
+    // 4-bit mode – 2 line – 5×7 font. 
+    lcd_cmd(0x0C);       // Display no cursor – no blink. 
+    lcd_cmd(0x06);       // Automatic Increment – No Display shift. 
+    lcd_cmd(0x80);       // Address DDRAM with 0 offset 80h. 
+}
+void lcd_data (unsigned char dat) 
+{ 
+    unsigned char data;
+    data=(dat & 0xF0)|(1<<LE)|(1<<LRS);
+    lcd_write(data);
+    data&=~(1<<LE);  
+    lcd_write(data);
+    data=((dat << 4) & 0xF0)|(1<<LE)|(1<<LRS);
+    lcd_write(data);
+    data&=~(1<<LE);  
+    lcd_write(data);
+    delay_ms(2); 
+    delay_ms(2); 
+} 
+void lcd_putchar(char c){
+    lcd_data(c);
+}
+void lcd_puts(char *str) 
+{ 
+    unsigned int i; 
+    for(i=0;str[i]!=0;i++)
+    lcd_data(str[i]);
+} 
+void lcd_clear(void){
+    lcd_cmd(0x01);
+}
+void lcd_gotoxy(unsigned char x, unsigned char y)
+{
+lcd_cmd(base_y[y]+x);
+}
+void lcd_backlightoff(void){
+    lbl=0;
+}
+void lcd_backlighton(void){
+    lbl=1;
+}
+void lcd_backlighttoggle(void){
+    lbl++;
+}
